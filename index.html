@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReBirth to Octatrack</title>
+<meta name="description" content="Converts ReBirth RB-338 2.0 songs (.rbs) into Octatrack projects for the GARDEN firmware, in the browser.">
+<style>
+:root{--bg:#111214;--panel:#1b1d21;--line:#2c2f35;--text:#e8e6e1;--muted:#8d9098;--acc:#e8a33d;--ok:#6cc28a;--bad:#e5655a}
+@media (prefers-color-scheme: light){:root{--bg:#f4f2ee;--panel:#fff;--line:#dedad2;--text:#1d1d1f;--muted:#6b6b70;--acc:#b86e00;--ok:#2f8a4f;--bad:#c23b30}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Segoe UI,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:.02em}
+.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.step{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);font-weight:700;margin:0 0 8px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 4px}
+input[type=number]{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:13px ui-monospace,Menlo,monospace}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.check{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px}
+.check input{margin-top:3px}
+button,.btn{background:none;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:7px 12px;font-size:14px;cursor:pointer}
+button.primary{border-color:var(--acc);color:var(--acc);font-weight:600}
+button:disabled{opacity:.4;cursor:default}
+.tpl{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tpl .state{font:13px ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-all}
+.tpl .state.ok{color:var(--ok)}.tpl .state.bad{color:var(--bad);white-space:pre-wrap}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:36px 16px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+#drop.on{border-color:var(--acc);color:var(--text)}
+#drop.off{opacity:.45;cursor:default}
+#drop b{color:var(--text)}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.bar .count{color:var(--muted);font-size:13px;margin-right:auto}
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item:first-child{border-top:0}
+.head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.name{font-weight:600}
+.dest{color:var(--muted);font:12px ui-monospace,Menlo,monospace}
+.st{font-size:12px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:4px}
+.st.wait{color:var(--muted);border:1px solid var(--line)}
+.st.ok{color:var(--ok);border:1px solid var(--ok)}
+.st.bad{color:var(--bad);border:1px solid var(--bad)}
+details{margin-top:6px}
+summary{cursor:pointer;color:var(--muted);font-size:13px}
+pre{white-space:pre-wrap;margin:6px 0 0;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted)}
+#status{font-size:13px;color:var(--muted);margin:0 0 16px}
+.help{color:var(--muted);font-size:14px}
+.help li{margin:4px 0}
+code{font:13px ui-monospace,Menlo,monospace}
+@media (max-width:560px){.row3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>ReBirth &rarr; Octatrack</h1>
+<p class="sub">Song-uri <b>.rbs</b> din ReBirth RB-338 2.0 transformate &icirc;n proiecte Octatrack pentru firmware-ul GARDEN: T1 ACID, T2 BASS 101, T5&ndash;T8 Rhythm 9 (BD, SD, CH, OH) &#537;i song-ul &icirc;n arranger. Totul ruleaz&#259; &icirc;n browserul t&#259;u; nimic nu se trimite nic&#259;ieri.</p>
+<p id="status">Se &icirc;ncarc&#259; motorul Python (Pyodide)&hellip;</p>
+
+<div class="card">
+ <p class="step">1 &middot; Proiectul &#537;ablon</p>
+ <div class="tpl">
+  <button id="pickTpl" class="primary">Alege folderul &#537;ablon&hellip;</button>
+  <input type="file" id="tplInput" webkitdirectory directory multiple hidden>
+  <span class="state" id="tplState">niciun &#537;ablon</span>
+ </div>
+ <p class="help">Un proiect salvat pe Octatrack (cu GARDEN): sample-urile <code>ACID</code>, <code>BASS</code>, <code>BD</code>, <code>SD</code>, <code>OH</code> &icirc;n sloturi FLEX, iar &icirc;n bank A pe T1 ACID, T2 BASS, T5 BD, T6 SD, T7 OH (scurtat), T8 OH. Browserul &icirc;l &#539;ine minte.</p>
+</div>
+
+<div class="card">
+ <p class="step">2 &middot; Op&#539;iuni</p>
+ <div class="row3">
+  <div><label for="bank">Bank (song-ul ia 2)</label><input type="number" id="bank" min="1" max="15" value="1"></div>
+  <div><label for="oct1">Octav&#259; T1</label><input type="number" id="oct1" min="-3" max="3" value="0"></div>
+  <div><label for="oct2">Octav&#259; T2</label><input type="number" id="oct2" min="-3" max="3" value="0"></div>
+ </div>
+ <div class="check"><input type="checkbox" id="octknob" checked><span>GARDEN36+: octavele pe knob-ul OCT, cen&#539;ii pe FINE la BASS (debifat: GARDEN35)</span></div>
+ <div class="check"><input type="checkbox" id="song" checked><span>Song-ul ReBirth &icirc;n arranger (ARR 1, se reia de la cap&#259;t). Pe MK1 por&#539;i arranger-ul cu FUNC + PATTERN.</span></div>
+</div>
+
+<div class="card">
+ <p class="step">3 &middot; Song-urile</p>
+ <div id="drop" class="off"><b>Trage aici fi&#537;ierele .rbs</b><br>sau d&#259; click ca s&#259; le alegi<input type="file" id="pick" accept=".rbs,.RBS" multiple hidden></div>
+</div>
+
+<div class="card" id="results" hidden>
+ <div class="bar">
+  <span class="count" id="count"></span>
+  <button id="download" class="primary" disabled>Descarc&#259; .zip</button>
+  <button id="clear">Gole&#537;te</button>
+ </div>
+ <div id="list"></div>
+</div>
+
+<div class="card help">
+ <p class="step">Pe card</p>
+ <ol>
+  <li>Dezarhivezi <code>.zip</code>-ul &icirc;n folderul <b>Set</b>-ului de pe CompactFlash, l&acirc;ng&#259; proiectul &#537;ablon (sample-urile sunt c&#259;utate &icirc;n <code>../AUDIO</code>).</li>
+  <li>Pe Octatrack: PROJECT &rarr; CHANGE (MK1: FUNC + MIXER) &#537;i alegi proiectul.</li>
+  <li>Pattern-urile A1&ndash;B8 din ReBirth sunt &icirc;n bank-ul A, C1&ndash;D8 &icirc;n bank-ul B; combina&#539;iile din song de la bank-ul C &icirc;n sus.</li>
+ </ol>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
